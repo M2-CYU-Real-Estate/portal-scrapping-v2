@@ -1,0 +1,11 @@
+{
+  "name": "scrapping_template",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "author": "Aldric Vitali Silvestre",
+  "license": "MIT",
+  "dependencies": {
+    "command-line-args": "^5.2.1",
+    "puppeteer": "^19.2.1"
+  }
+}
