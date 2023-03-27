@@ -96,12 +96,15 @@ async function scrapeData(url) {
         toilletes = 0;
         parking = 0;
         
-      }else{
-        continue;
+      }else {
+        pieces =0;
+        surface = 0;
+        chambres = 0;
+        toilletes = 0;
+        parking = 0;
+        price=0;
       }
-      if (price == NaN || price ==0) {
-        continue;
-      }
+     
       
       const refSelector = 'h1.KeyInfoBlockStyle__PdpTitle-sc-1o1h56e-2.ilPGib span';
       const refElement = await page.$(refSelector);
@@ -116,26 +119,26 @@ async function scrapeData(url) {
       // Get the feature block
       const rowFeatures = await page.$$('.row-feature');
       const featuresArr = [];
-      // for (const rowFeature of rowFeatures) {
-      //   if (rowFeature) {
-      //     const features = await rowFeature.$$eval('.feature-bloc-content-specification-content', elems =>
-      //       elems.map(elem => {
-      //         const titleElem = elem.querySelector('.feature-bloc-content-specification-content-name');
-      //         const title = titleElem ? titleElem.textContent.trim() : '';
-      //         const valueElem = elem.querySelector('.feature-bloc-content-specification-content-response div');
-      //         const value = valueElem ? valueElem.textContent.trim() : '';
-      //         return { title, value };
-      //       })
-      //     );
-      //     featuresArr.push(...features);
-      //   } else {
-      //     console.log('row-feature element not found');
-      //   }
-      // }
-      // const featureObj = featuresArr.reduce((obj, item) => {
-      //   obj[item.title] = item.value;
-      //   return obj;
-      // }, {});
+      for (const rowFeature of rowFeatures) {
+        if (rowFeature) {
+          const features = await rowFeature.$$eval('.feature-bloc-content-specification-content', elems =>
+            elems.map(elem => {
+              const titleElem = elem.querySelector('.feature-bloc-content-specification-content-name');
+              const title = titleElem ? titleElem.textContent.trim() : '';
+              const valueElem = elem.querySelector('.feature-bloc-content-specification-content-response div');
+              const value = valueElem ? valueElem.textContent.trim() : '';
+              return { title, value };
+            })
+          );
+          featuresArr.push(...features);
+        } else {
+          console.log('row-feature element not found');
+        }
+      }
+      const featureObj = featuresArr.reduce((obj, item) => {
+        obj[item.title] = item.value;
+        return obj;
+      }, {});
       
       const scrapedData = {
         title: titleParts[0],
@@ -149,7 +152,7 @@ async function scrapeData(url) {
         chambres,
         toilletes,
         parking,
-        // features: featureObj,
+        features: featureObj,
         image,
         description
       };
@@ -182,7 +185,7 @@ async function run(url) {
 async function scrapeAllPages() {
   const allData = [];
   let i =1;
-  while(true && i <=21){
+  while(true && i <=100){
     
     const url = `https://www.immoregion.fr/vente?page=${i}`;
     const data = await run(url);

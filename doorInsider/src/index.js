@@ -149,7 +149,7 @@ async function run(url) {
 async function scrapeAllPages() {
   const allData = [];
   let i =1;
-  while(true && i<=20){
+  while(true && i<=100){
     const url = `https://www.doorinsider.com/fr/annonces-immobilieres/vente/france?page=${i}`;
     const data = await run(url);
     if (data === undefined || data.length == 0) {

@@ -34,7 +34,6 @@ async function scrapeData(url) {
     let i=1;
     for (const href of hrefs) {
       await page.goto(href);
-
       const pageTitle = await page.title();
       // Remove all special characters
       const cleanInput = pageTitle.replace(/[^\w\s]/gi, '');
@@ -42,12 +41,12 @@ async function scrapeData(url) {
       const parts = cleanInput.split(/\s+/);
 
       // Extract the desired values
-      let ville ='';
-      if (parts[3] == 'La' || parts[3] =='Le'){
-        ville = parts[3]+ ' '+ parts[4];
-      }else{
-        ville = parts[3];
-      }
+      const villeSelector = 'span.ttldetail_loch1';
+      const villeElement = await page.$(villeSelector);
+      const villeInfo = villeElement ? await villeElement.evaluate(el => el.textContent.trim()) : 'none';
+      const villeList = villeInfo.split(' ');
+      const ville = villeList[0];
+     
       const typeBien = parts[2];
       const surface = parseInt(parts[5]);
       const price = parseFloat(parts[7]+parts[8]);
@@ -130,7 +129,7 @@ async function run(url) {
 async function scrapeAllPages() {
   const allData = [];
   let i =1;
-  while(true && i <=1){
+  while(true && i <=100){
     
     const url = `https://www.paruvendu.fr/immobilier/vente/maison/?p=${i}`;
     const data = await run(url);
@@ -139,6 +138,7 @@ async function scrapeAllPages() {
       console.log("[SCRAPPING HAS FINISHED]");
       break;
     }else if (data == 1){
+      i+=1;
      continue;
     }else{
       allData.push(...data);
