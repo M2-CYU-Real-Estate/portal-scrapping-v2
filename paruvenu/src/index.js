@@ -38,23 +38,45 @@ async function scrapeData(url) {
       // Remove all special characters
       const cleanInput = pageTitle.replace(/[^\w\s]/gi, '');
       // Split the input by whitespace
-      const parts = cleanInput.split(/\s+/);
-
-      // Extract the desired values
-      const villeSelector = 'span.ttldetail_loch1';
-      const villeElement = await page.$(villeSelector);
-      const villeInfo = villeElement ? await villeElement.evaluate(el => el.textContent.trim()) : 'none';
-      const villeList = villeInfo.split(' ');
-      const ville = villeList[0];
-     
+      const parts = cleanInput.split(/\s+/)
       const typeBien = parts[2];
-      const surface = parseInt(parts[5]);
-      const price = parseFloat(parts[7]+parts[8]);
-      const ref = parseFloat(parts[9]);
 
-      const pieceSelector = 'li.nbp';
+      // get the ref
+      const refSelector = 'ul.crit-alignbloc li';
+      const refElements = await page.$$(refSelector);
+      const ref = refElements[refElements.length - 2] ? await refElements[refElements.length - 2].evaluate(el => el.textContent.trim().replace(/[^\d]/g, '')) : 'none';
+      console.log(ref, href)
+
+      // get the surface
+      const surfaceSelector = 'li.surf span';
+      const surfaceElement = await page.$(surfaceSelector);
+      let surface = surfaceElement ? await surfaceElement.evaluate(el => el.textContent) : 'none';
+      surface = parseInt(surface.replace(/[^\d]/g, ''));
+
+      // get the price
+      const priceSelector = 'div#autoprix';
+      const priceElement = await page.$(priceSelector);
+      let price = priceElement ? await priceElement.evaluate(el => el.textContent.trim()) : 'none';
+      price = parseInt(price.replace(/[^\d]/g, ''));
+
+      // get the city and code postale
+      let ville = '';
+      let codePostale = '';
+      const localisationSelector = 'span#detail_loc';
+      const localisationElement = await page.$(localisationSelector);
+      const localisationPost = localisationElement ? await localisationElement.evaluate(el => el.textContent.trim().replace(/[^a-zA-Z0-9 ]/g, "")) : 'none';
+      const match = localisationPost.match(/^(.*)\s+(\d{5})$/);
+      if (match) {
+        ville = match[1].trim();
+        codePostale = match[2];
+      } else {
+        ville = '';
+        codePostale = '';
+      }
+
+      const pieceSelector = 'li.nbp span';
       const pieceElement = await page.$(pieceSelector);
-      const pieces = pieceElement ? await pieceElement.evaluate(el => el.textContent.trim()) : 'none';
+      const pieces = pieceElement ? await pieceElement.evaluate(el => parseInt(el.textContent.trim())) : 'none';
 
       const features = await page.evaluate(() => {
         const infos = document.querySelectorAll('ul.crit-alignbloc');
@@ -79,28 +101,25 @@ async function scrapeData(url) {
 
       const energySelector = 'div .DPE_consEnerNote';
       const energyElement = await page.$(energySelector);
-      const classEnergy = energyElement ? await energyElement.evaluate(el => el.textContent.trim()) : 'none';
+      const classEnergy = energyElement ? await energyElement.evaluate(el => el.textContent.trim()) : 'ND';
 
       const gazSelector = 'div .DPE_effSerreNote';
       const gazElement = await page.$(gazSelector);
-      const gazEmission = gazElement ? await gazElement.evaluate(el => el.textContent.trim()) : 'none';
+      const gazEmission = gazElement ? await gazElement.evaluate(el => el.textContent.trim()) : 'ND';
 
       features['classEnergy'] = classEnergy;
       features['gazEmission'] = gazEmission;
 
       const url = href;
-      const parking = 0;
-      const chambres = 0;
-      const toilletes = 0;
 
       const descriptionSelector = 'div#txtAnnonceTrunc';
       const descriptionElement = await page.$(descriptionSelector);
       const description = descriptionElement ? await descriptionElement.evaluate(el => el.textContent.replace(/[\n\t]/g, '').replace(/\s{2,}/g, ' '))  : 'none';
       
       const hasCuisine = description.includes('cuisine');
-      const cuisine = hasCuisine ? 'Oui' : 'Non';
+      const cuisine = hasCuisine ? true : false;
 
-      const scrapedData = { title: pageTitle,url,ref,typeBien,ville, price, surface, pieces, chambres,toilletes,parking,cuisine, features, description, image };
+      const scrapedData = { title: pageTitle,url,ref,typeBien,ville,codePostale, price, surface, pieces,cuisine, features, description, image };
       data.push(scrapedData);
       console.log(`[ANNONCE ${i} SCRAPPED]`);
       i +=1;
@@ -129,7 +148,7 @@ async function run(url) {
 async function scrapeAllPages() {
   const allData = [];
   let i =1;
-  while(true && i <=100){
+  while(true && i <=300){
     
     const url = `https://www.paruvendu.fr/immobilier/vente/maison/?p=${i}`;
     const data = await run(url);
@@ -146,9 +165,6 @@ async function scrapeAllPages() {
       i++;
     }
   }
-  
-  
-
   return allData;
 }
 

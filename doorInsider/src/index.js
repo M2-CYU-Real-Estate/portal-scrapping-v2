@@ -108,11 +108,11 @@ async function scrapeData(url) {
 
       const energySelector = 'div .field.field--name-field-energy-class';
       const energyElement = await page.$(energySelector);
-      const classEnergy = energyElement ? await energyElement.evaluate(el => el.textContent.trim()) : 'none';
+      const classEnergy = energyElement ? await energyElement.evaluate(el => el.textContent.trim()) : 'ND';
 
       const gazSelector = 'div .field.field--name-field-ghg-class';
       const gazElement = await page.$(gazSelector);
-      const gazEmission = gazElement ? await gazElement.evaluate(el => el.textContent.trim()) : 'none';
+      const gazEmission = gazElement ? await gazElement.evaluate(el => el.textContent.trim()) : 'ND';
       
       features['classEnergy'] = classEnergy;
       features['gazEmission'] = gazEmission;
@@ -149,7 +149,7 @@ async function run(url) {
 async function scrapeAllPages() {
   const allData = [];
   let i =1;
-  while(true && i<=100){
+  while(true && i<=300){
     const url = `https://www.doorinsider.com/fr/annonces-immobilieres/vente/france?page=${i}`;
     const data = await run(url);
     if (data === undefined || data.length == 0) {

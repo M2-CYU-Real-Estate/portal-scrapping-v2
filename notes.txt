@@ -1,0 +1,10 @@
+changer le mode select du titre des pages
+changer globalement tes queries.
+logfile if error or timeout pages. 
+
+
+
+const refSelector = 'div.KeyrefBlockStyle__refrmationLogoContainer-sc-1o1h56e-10.eYArfF';
+       const refElement = await page.$(refSelector);
+       const refPost = refElement ? await refElement.evaluate(el => el.textContent) : 'none';
+       const refLists = refPost.split(' ');

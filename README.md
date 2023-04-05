@@ -39,3 +39,11 @@ Each scraper / implementation must have at least :
  - One .gitignore file
 
 
+## Data structure
+```
+Index(['title', 'ref', 'typeBien', 'ville', 'price', 'surface', 'pieces',
+       'cuisine', 'surface_terrain', 'chambres', 'nbSalleBain',
+       'terrace/balcon', 'jardin', 'garage/parking', 'classEnergy',
+       'gazEmission'],
+      dtype='object')
+```
