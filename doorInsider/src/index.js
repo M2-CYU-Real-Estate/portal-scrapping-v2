@@ -93,13 +93,18 @@ async function scrapeData(url) {
             });
             dict[title] = values;
           } else {
-            const titles = [];
-            const titleElements = labels[i].querySelectorAll('h3');
-            titleElements.forEach((title) => titles.push(title.textContent));
-            const valuesList = labels[i].querySelectorAll('.field__item');
-            const values = [];
-            valuesList.forEach((value) => values.push(value.textContent));
-            titles.forEach((title) => (dict[title] = values));
+            const childs = labels[i].children;
+            const childArray = [].slice.call(childs);
+            const res = childArray.map(a => [a.querySelector("h3").textContent, a]);
+            for (const el of res){
+              let title = el[0];
+              let valuesList = el[1].querySelectorAll('div .field__item');
+              const values = [];
+              valuesList.forEach((value) => values.push(value.textContent));
+              console.log("title:", title);
+              console.log("content:", values);
+              dict[title] = values;
+              }
           }
         }
        
@@ -149,7 +154,7 @@ async function run(url) {
 async function scrapeAllPages() {
   const allData = [];
   let i =1;
-  while(true && i<=300){
+  while(true && i<=1){
     const url = `https://www.doorinsider.com/fr/annonces-immobilieres/vente/france?page=${i}`;
     const data = await run(url);
     if (data === undefined || data.length == 0) {
