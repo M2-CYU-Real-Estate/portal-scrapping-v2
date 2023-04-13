@@ -1,7 +1,15 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const commandLineArgs = require('command-line-args');
-const { features } = require('process');
+const path = require('path');
+
+const DELAY_AFTER_LOAD_MS = 350;
+
+function delay(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 async function scrapeData(url) {
   const data = [];
@@ -15,7 +23,11 @@ async function scrapeData(url) {
   page.setDefaultTimeout(30000); // 30 seconds
 
   try{
-    await page.goto(url);
+
+     // Set a timeout for all subsequent actions performed on the page
+     page.setDefaultTimeout(50000); // 30 seconds
+     await page.goto(url, { waitUntil: 'domcontentloaded' });
+     await delay(DELAY_AFTER_LOAD_MS);
 
     // Scrape the data and push it into the `data` array
     const details = await page.$$eval('article',(elements)=>
@@ -80,7 +92,9 @@ async function scrapeData(url) {
             listDetail.push(pieces)
             listDetail.push(surface)
             listDetail.push(chambres)
-            listDetail.push(parking)
+            listDetail.push(parking);
+            console.log(listDetail[2], listDetail[1])
+            
             // pus the final data
             const dataDict = {
               "title": listDetail[0],
@@ -153,6 +167,7 @@ async function scrapeData(url) {
         "chambres":listData[12],
         "parking":listData[13],
       };
+      console.log(listData[2], listData[1])
       
       // Push the scrapedData object to the data array
       data.push(dataDict);
@@ -184,14 +199,7 @@ async function extractData(detail, page){
   // get typeBien
   let typeBien = titleInfo[0].split(' ');
   typeBien =  typeBien[1];
-
-  // Get the city name impossible de selectionner la ville sur le dom pour l'instant
-
-  // const localisationSelector = 'div.key-content';
-  // const localisationElement = await page.$(localisationSelector);
-  // const localisation= localisationElement ? await localisationElement.evaluate(el => el.textContent) : 'none';
-  // const localisationLists = localisation.split(' ');
-
+  
   const  postalCode='', ville = titleInfo[1];
 
   // Get the price
@@ -253,7 +261,7 @@ async function run(url) {
 async function scrapeAllPages() {
   const allData = [];
   let i =1;
-  while(true && i <=300){
+  while(true && i <=1){
     
     const url = `https://www.immoregion.fr/vente?page=${i}`;
     const data = await run(url);
@@ -300,6 +308,7 @@ const parseArgs = () => {
 
 const main = async () => {
 
+  const startTime = Date.now();
   const args = parseArgs();
   const outputPath = args.output;
   console.log("[SCRAPPING INITIATED...]")
@@ -311,6 +320,8 @@ const main = async () => {
           // TODO, use outputPath to save to specific path
           JSON.stringify(data)
           )});
+  const endTime = Date.now();
+  console.log(`[TOTAL EXECUTION TIME : ${endTime - startTime}ms]`);
 };
 
 

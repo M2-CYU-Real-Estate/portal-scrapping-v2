@@ -1,6 +1,15 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
+const path = require('path');
 const commandLineArgs = require('command-line-args');
+
+const DELAY_AFTER_LOAD_MS = 350;
+
+function delay(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 async function scrapeData(url) {
 
@@ -17,8 +26,11 @@ async function scrapeData(url) {
   page.setDefaultTimeout(30000); // 30 seconds
   
   try{
-    await page.goto(url);
 
+    // Set a timeout for all subsequent actions performed on the page
+    page.setDefaultTimeout(50000); // 30 seconds
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    await delay(DELAY_AFTER_LOAD_MS);
 
     // Scrape the data and push it into the `data` array
     const details = await page.$$eval('.node--view-mode-search',(elements)=>
@@ -30,6 +42,8 @@ async function scrapeData(url) {
     for (const detail of details) {
       await page.goto(detail.link);
 
+      const url = detail.link;
+      
       const pageTitle = await page.title();
       let villeInfo = pageTitle.split(" - ");
       const ville = villeInfo[3];
@@ -44,6 +58,8 @@ async function scrapeData(url) {
       const refElement = await page.$(refSelector);
       const refText = refElement ? await refElement.evaluate(el => el.textContent.trim()) : 'none';
       const ref = refText.match(/REF:\s*(\d+)/)[1];
+      console.log(ref, url)
+
 
       const priceSelector = 'div .property-header-prices-fai';
       const priceElement = await page.$(priceSelector);
@@ -71,7 +87,6 @@ async function scrapeData(url) {
         el.textContent.replace(/[\n\t]/g, '').replace(/\s{2,}/g, ' '))  : 'none';
 
       const image = detail.image;
-      const url = detail.link;
 
       // Wait for the characteristics section to load
       await page.waitForSelector('.group-characteristics-columns');
@@ -199,6 +214,8 @@ const parseArgs = () => {
 
 const main = async () => {
 
+  const startTime = Date.now();
+
   const args = parseArgs();
   const outputPath = args.output;
   console.log("[SCRAPPING INITIATED...]")
@@ -210,6 +227,9 @@ const main = async () => {
           // TODO, use outputPath to save to specific path
           JSON.stringify(data)
           )});
+
+  const endTime = Date.now();
+  console.log(`[TOTAL EXECUTION TIME : ${endTime - startTime}ms]`);
 };
 
 

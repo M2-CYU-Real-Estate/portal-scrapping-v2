@@ -1,7 +1,15 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
+const path = require('path');
 const commandLineArgs = require('command-line-args');
-const { title } = require('process');
+
+const DELAY_AFTER_LOAD_MS = 350;
+
+function delay(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 async function scrapeData(url) {
   const data = [];
@@ -16,16 +24,14 @@ async function scrapeData(url) {
   page.setDefaultTimeout(50000); // 30 seconds
 
   try{
-    await page.goto(url);
 
-    // Wait for the button to appear
-    await page.waitForSelector('div.container.buttons button:nth-child(2)');
+    // Set a timeout for all subsequent actions performed on the page
+    page.setDefaultTimeout(50000); // 30 seconds
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    await delay(DELAY_AFTER_LOAD_MS);
 
     // Click on the button
     await page.click('div.container.buttons button:nth-child(2)');
-
-    // Wait for the button to disappear
-    await page.waitForSelector('div.container.buttons button:nth-child(2)', { hidden: true });
 
     //Scrape the data and push it into the `data` array
 
@@ -148,7 +154,7 @@ async function run(url) {
 async function scrapeAllPages() {
   const allData = [];
   let i =1;
-  while(true && i <=300){
+  while(true && i <=1){
     
     const url = `https://www.paruvendu.fr/immobilier/vente/maison/?p=${i}`;
     const data = await run(url);
@@ -192,6 +198,8 @@ const parseArgs = () => {
 
 
 const main = async () => {
+  
+  const startTime = Date.now();
 
   const args = parseArgs();
   const outputPath = args.output;
@@ -204,6 +212,9 @@ const main = async () => {
           // TODO, use outputPath to save to specific path
           JSON.stringify(data)
           )});
+
+  const endTime = Date.now();
+  console.log(`[TOTAL EXECUTION TIME : ${endTime - startTime}ms]`);
 };
 
 
