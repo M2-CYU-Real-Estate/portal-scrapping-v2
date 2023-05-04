@@ -3,7 +3,7 @@ const fs = require('fs');
 const commandLineArgs = require('command-line-args');
 const path = require('path');
 
-const DELAY_AFTER_LOAD_MS = 350;
+const DELAY_AFTER_LOAD_MS = 500;
 
 function delay(ms) {
   return new Promise((resolve) => {
@@ -15,7 +15,7 @@ async function scrapeData(url) {
   const data = [];
   const browser = await puppeteer.launch({
       args: ['--no-sandbox'], // useful when using docker (allow using app as admin)
-      headless: false,
+      headless: true,
       ignoreHTTPSErrors: true,
     });
   const page = await browser.newPage();
@@ -38,6 +38,7 @@ async function scrapeData(url) {
     let i=0;
     for (const detail of details) {
       await page.goto(detail.link);
+      await delay(DELAY_AFTER_LOAD_MS);
       
       let listData = await extractData(detail, page)
 
@@ -298,9 +299,6 @@ const parseArgs = () => {
   if (!options.output) {
       throw new Error('"--output" argument required');
   }
-  if (!fs.existsSync(options.output)) {
-      throw new Error(`Output directory does not exist : ${options.output}`);
-  }
   
   return options;
 };
@@ -313,13 +311,34 @@ const main = async () => {
   const outputPath = args.output;
   console.log("[SCRAPPING INITIATED...]")
 
-  //TODO, call the specific method(s) for fetching data (iterable, array of jsons, whatever)
-  scrapeAllPages()
-      .then(data => {
-          fs.writeFileSync(outputPath,
-          // TODO, use outputPath to save to specific path
-          JSON.stringify(data)
-          )});
+  // //TODO, call the specific method(s) for fetching data (iterable, array of jsons, whatever)
+  // scrapeAllPages()
+  //     .then(data => {
+  //         fs.writeFileSync(outputPath,
+  //         // TODO, use outputPath to save to specific path
+  //         JSON.stringify(data)
+  //         )});
+
+  let i =1;
+  while(true){
+    const startLoopTime = new Date();
+    const url = `https://www.immoregion.fr/vente?page=${i}`;
+    const data = await run(url);
+    const endLoopTime = new Date();
+    console.log(`[loop execution time : ${endLoopTime - startLoopTime}ms]`);
+    
+    if (data === undefined || data.length == 0) {
+      console.log("[SCRAPPING HAS FINISHED]");
+      break;
+    }else if (data == 1){
+     continue;
+    }else{
+      fs.writeFileSync(`${outputPath}_p${i}.json`, JSON.stringify(data));
+      console.log("[SCRAPPING FINISHED FOR PAGE]", i)
+      i++;
+    }
+  }
+
   const endTime = Date.now();
   console.log(`[TOTAL EXECUTION TIME : ${endTime - startTime}ms]`);
 };
