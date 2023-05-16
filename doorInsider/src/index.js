@@ -41,6 +41,7 @@ async function scrapeData(url) {
     let i=0;
     for (const detail of details) {
       await page.goto(detail.link);
+      await delay(DELAY_AFTER_LOAD_MS);
 
       const url = detail.link;
       
@@ -57,7 +58,8 @@ async function scrapeData(url) {
       const refSelector = 'div .property-header-type-address-type-ref';
       const refElement = await page.$(refSelector);
       const refText = refElement ? await refElement.evaluate(el => el.textContent.trim()) : 'none';
-      const ref = refText.match(/REF:\s*(\d+)/)[1];
+      let ref = refText.match(/REF:\s*(\d+)/)[1];
+      ref = ville + "-" + ref;
       console.log(ref, url)
 
 

@@ -38,6 +38,7 @@ async function scrapeData(url) {
     let i=0;
     for (const detail of details) {
       await page.goto(detail.link);
+      await delay(DELAY_AFTER_LOAD_MS);
       
       let listData = await extractData(detail, page)
 
@@ -214,6 +215,7 @@ async function extractData(detail, page){
   let ref = refElement ? await refElement.evaluate(el => el.textContent) : 'none';
   ref = ref.split(" ");
   ref = ref[1];
+  ref = ville + "-" + ref;
 
   // Get the image
   const imageSelector = 'source';

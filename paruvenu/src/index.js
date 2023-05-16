@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const commandLineArgs = require('command-line-args');
 
-const DELAY_AFTER_LOAD_MS = 350;
+const DELAY_AFTER_LOAD_MS = 500;
 
 function delay(ms) {
   return new Promise((resolve) => {
@@ -11,8 +11,9 @@ function delay(ms) {
   });
 }
 
-async function scrapeData(url) {
+async function scrapeData(url,dep) {
   const data = [];
+  let lastPage = false;
   const browser = await puppeteer.launch({
       args: ['--no-sandbox'], // useful when using docker (allow using app as admin)
       headless: false,
@@ -33,31 +34,41 @@ async function scrapeData(url) {
     // Click on the button
     await page.click('div.container.buttons button:nth-child(2)');
 
-    //Scrape the data and push it into the `data` array
+    // check if next button exists
+    const nextButton = await page.$('div.pgsuiv');
+    if (!nextButton){
+      lastPage = true;
+      console.log("[LAST PAGE TO SCRAP IN THIS SECTION]");
+    }
 
+    //Scrape the data and push it into the `data` array
     const hrefs = await page.$$eval('.flex.sm\\:block.gap-4 a', links => links.map(link => link.href));
 
     let i=1;
     for (const href of hrefs) {
       await page.goto(href);
+      await delay(DELAY_AFTER_LOAD_MS);
       const pageTitle = await page.title();
       // Remove all special characters
       const cleanInput = pageTitle.replace(/[^\w\s]/gi, '');
       // Split the input by whitespace
       const parts = cleanInput.split(/\s+/)
       const typeBien = parts[2];
+      if (typeBien == "voiture"){
+        return [1, false]; // crawler has beeb detected
+      }
 
       // get the ref
       const refSelector = 'ul.crit-alignbloc li';
       const refElements = await page.$$(refSelector);
-      const ref = refElements[refElements.length - 2] ? await refElements[refElements.length - 2].evaluate(el => el.textContent.trim().replace(/[^\d]/g, '')) : 'none';
+      let ref = refElements[refElements.length - 2] ? await refElements[refElements.length - 2].evaluate(el => el.textContent.trim().replace(/[^\d]/g, '')) : 'none';
       console.log(ref, href)
 
       // get the surface
       const surfaceSelector = 'li.surf span';
       const surfaceElement = await page.$(surfaceSelector);
       let surface = surfaceElement ? await surfaceElement.evaluate(el => el.textContent) : 'none';
-      surface = parseInt(surface.replace(/[^\d]/g, ''));
+      surface = parseInt(surface.replace(/[^0-9]/g, ''));
 
       // get the price
       const priceSelector = 'div#autoprix';
@@ -79,6 +90,7 @@ async function scrapeData(url) {
         ville = '';
         codePostale = '';
       }
+      ref = ville + "-" + ref;
 
       const pieceSelector = 'li.nbp span';
       const pieceElement = await page.$(pieceSelector);
@@ -125,7 +137,9 @@ async function scrapeData(url) {
       const hasCuisine = description.includes('cuisine');
       const cuisine = hasCuisine ? true : false;
 
-      const scrapedData = { title: pageTitle,url,ref,typeBien,ville,codePostale, price, surface, pieces,cuisine, features, description, image };
+      const departement = dep;
+
+      const scrapedData = { title: pageTitle,url,ref,typeBien,ville,codePostale,departement, price, surface, pieces,cuisine, features, description, image };
       data.push(scrapedData);
       console.log(`[ANNONCE ${i} SCRAPPED]`);
       i +=1;
@@ -135,7 +149,7 @@ async function scrapeData(url) {
     if (e instanceof puppeteer.errors.TimeoutError) {
       console.error('Timeout error:', e.message);
       await browser.close();
-      return 1;
+      return [data,lastPage]; // error and not last page
     }else {
       console.error('Other error:', e.message);
     }
@@ -143,36 +157,49 @@ async function scrapeData(url) {
 
 
   await browser.close();
-  return data;
+  return [data,lastPage];
 }
 
-async function run(url) {
-  const data = await scrapeData(url);
-  return data;
+async function run(url,dep) {
+  const [data,lastPage] = await scrapeData(url,dep);
+  return [data,lastPage];
 }
 
 async function scrapeAllPages() {
   const allData = [];
-  let i =1;
-  while(true && i <=1){
+  
+  for (let j = 1; j <= 95; j++) {
+    const depNumber = j <= 9 ? "0" + j : j.toString();
+    let i = 1;
+    let end = true;
     
-    const url = `https://www.paruvendu.fr/immobilier/vente/maison/?p=${i}`;
-    const data = await run(url);
-    
-    if (data === undefined || data.length == 0) {
-      console.log("[SCRAPPING HAS FINISHED]");
-      break;
-    }else if (data == 1){
-      i+=1;
-     continue;
-    }else{
-      allData.push(...data);
-      console.log("[SCRAPPING FINISH FOR PAGE]", i)
-      i++;
+    while (end && i <= 20) {
+      const url = `https://www.paruvendu.fr/immobilier/annonceimmofo/liste/listeAnnonces?tt=1&tbApp=1&tbMai=1&at=1&pa=FR&lo=${depNumber}&ddlFiltres=nofilter&p=${i}`;
+      
+      try {
+        const [data,lastPage] = await run(url, depNumber);
+        if (lastPage) {
+          console.log("[SCRAPING HAS FINISHED]");
+          allData.push(...data);
+          end = false;
+        } else if (data === 1) {
+          i++;
+          continue;
+        } else {
+          allData.push(...data);
+          console.log("[SCRAPING FINISH FOR PAGE]", i);
+          i++;
+        }
+      } catch (error) {
+        console.error("An error occurred during scraping:", error);
+      }
     }
   }
+  
   return allData;
 }
+
+
 
 const parseArgs = () => {
   const optionDefitions = [
