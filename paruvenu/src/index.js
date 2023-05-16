@@ -173,7 +173,7 @@ async function scrapeAllPages() {
     let i = 1;
     let end = true;
     
-    while (end && i <= 20) {
+    while (end) {
       const url = `https://www.paruvendu.fr/immobilier/annonceimmofo/liste/listeAnnonces?tt=1&tbApp=1&tbMai=1&at=1&pa=FR&lo=${depNumber}&ddlFiltres=nofilter&p=${i}`;
       
       try {
