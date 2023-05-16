@@ -187,6 +187,7 @@ async function scrapeAllPages() {
           continue;
         } else {
           allData.push(...data);
+          
           console.log("[SCRAPING FINISH FOR PAGE]", i);
           i++;
         }
