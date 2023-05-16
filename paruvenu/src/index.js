@@ -46,7 +46,7 @@ async function scrapeData(url,dep) {
 
     let i=1;
     for (const href of hrefs) {
-      await page.goto(href);
+      await page.goto(href,{ waitUntil: 'domcontentloaded' });
       await delay(DELAY_AFTER_LOAD_MS);
       const pageTitle = await page.title();
       // Remove all special characters

@@ -40,7 +40,7 @@ async function scrapeData(url) {
       })));
     let i=0;
     for (const detail of details) {
-      await page.goto(detail.link);
+      await page.goto(detail.link,{ waitUntil: 'domcontentloaded' });
       await delay(DELAY_AFTER_LOAD_MS);
 
       const url = detail.link;
