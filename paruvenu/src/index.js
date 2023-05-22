@@ -21,13 +21,9 @@ async function scrapeData(url,dep) {
     });
   const page = await browser.newPage();
 
-  // Set a timeout for all subsequent actions performed on the page
-  page.setDefaultTimeout(50000); // 30 seconds
-
   try{
 
     // Set a timeout for all subsequent actions performed on the page
-    page.setDefaultTimeout(50000); // 30 seconds
     await page.goto(url, { waitUntil: 'domcontentloaded' });
     await delay(DELAY_AFTER_LOAD_MS);
 
@@ -48,6 +44,7 @@ async function scrapeData(url,dep) {
     for (const href of hrefs) {
       await page.goto(href,{ waitUntil: 'domcontentloaded' });
       await delay(DELAY_AFTER_LOAD_MS);
+
       const pageTitle = await page.title();
       // Remove all special characters
       const cleanInput = pageTitle.replace(/[^\w\s]/gi, '');
@@ -168,12 +165,12 @@ async function run(url,dep) {
 async function scrapeAllPages() {
   const allData = [];
   
-  for (let j = 1; j <= 95; j++) {
+  for (let j = 65; j <= 69; j++) {
     const depNumber = j <= 9 ? "0" + j : j.toString();
     let i = 1;
     let end = true;
     
-    while (end) {
+    while (end && i<=5) {
       const url = `https://www.paruvendu.fr/immobilier/annonceimmofo/liste/listeAnnonces?tt=1&tbApp=1&tbMai=1&at=1&pa=FR&lo=${depNumber}&ddlFiltres=nofilter&p=${i}`;
       
       try {
@@ -187,7 +184,6 @@ async function scrapeAllPages() {
           continue;
         } else {
           allData.push(...data);
-          
           console.log("[SCRAPING FINISH FOR PAGE]", i);
           i++;
         }

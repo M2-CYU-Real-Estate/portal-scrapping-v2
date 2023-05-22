@@ -3,7 +3,7 @@ const fs = require('fs');
 const commandLineArgs = require('command-line-args');
 const path = require('path');
 
-const DELAY_AFTER_LOAD_MS = 350;
+const DELAY_AFTER_LOAD_MS = 500;
 
 function delay(ms) {
   return new Promise((resolve) => {
@@ -19,13 +19,9 @@ async function scrapeData(url) {
       ignoreHTTPSErrors: true,
     });
   const page = await browser.newPage();
-  // Set a timeout for all subsequent actions performed on the page
-  page.setDefaultTimeout(30000); // 30 seconds
 
   try{
 
-     // Set a timeout for all subsequent actions performed on the page
-     page.setDefaultTimeout(50000); // 30 seconds
      await page.goto(url, { waitUntil: 'domcontentloaded' });
      await delay(DELAY_AFTER_LOAD_MS);
 
