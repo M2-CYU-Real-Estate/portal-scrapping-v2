@@ -165,7 +165,7 @@ async function run(url,dep) {
 async function scrapeAllPages() {
   const allData = [];
   
-  for (let j = 65; j <= 69; j++) {
+  for (let j = 1; j <= 95; j++) {
     const depNumber = j <= 9 ? "0" + j : j.toString();
     let i = 1;
     let end = true;
