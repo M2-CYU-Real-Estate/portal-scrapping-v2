@@ -22,6 +22,7 @@ async function scrapeData(url) {
 
   try{
 
+     page.setDefaultTimeout(50000); // 50000 seconds
      await page.goto(url, { waitUntil: 'domcontentloaded' });
      await delay(DELAY_AFTER_LOAD_MS);
 
