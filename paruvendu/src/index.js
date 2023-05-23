@@ -11,17 +11,17 @@ function delay(ms) {
   });
 }
 
-async function scrapeData(url,dep) {
+async function scrapeOnePage(url, dep) {
   const data = [];
   let lastPage = false;
   const browser = await puppeteer.launch({
-      args: ['--no-sandbox'], // useful when using docker (allow using app as admin)
-      headless: false,
-      ignoreHTTPSErrors: true,
-    });
+    args: ['--no-sandbox'], // useful when using docker (allow using app as admin)
+    headless: true,
+    ignoreHTTPSErrors: true,
+  });
   const page = await browser.newPage();
 
-  try{
+  try {
 
     // Set a timeout for all subsequent actions performed on the page
     page.setDefaultTimeout(50000); // 50000 seconds
@@ -33,7 +33,7 @@ async function scrapeData(url,dep) {
 
     // check if next button exists
     const nextButton = await page.$('div.pgsuiv');
-    if (!nextButton){
+    if (!nextButton) {
       lastPage = true;
       console.log("[LAST PAGE TO SCRAP IN THIS SECTION]");
     }
@@ -41,9 +41,9 @@ async function scrapeData(url,dep) {
     //Scrape the data and push it into the `data` array
     const hrefs = await page.$$eval('.flex.sm\\:block.gap-4 a', links => links.map(link => link.href));
 
-    let i=1;
+    let i = 1;
     for (const href of hrefs) {
-      await page.goto(href,{ waitUntil: 'domcontentloaded' });
+      await page.goto(href, { waitUntil: 'domcontentloaded' });
       await delay(DELAY_AFTER_LOAD_MS);
 
       const pageTitle = await page.title();
@@ -52,7 +52,7 @@ async function scrapeData(url,dep) {
       // Split the input by whitespace
       const parts = cleanInput.split(/\s+/)
       const typeBien = parts[2];
-      if (typeBien == "voiture"){
+      if (typeBien == "voiture") {
         return [1, false]; // crawler has beeb detected
       }
 
@@ -103,14 +103,14 @@ async function scrapeData(url,dep) {
             const [key, value] = span.textContent.trim().split(':');
             if (key && value) {
               result[key.trim()] = value.trim();
-            }else{
-              result[key.trim()] =null;
+            } else {
+              result[key.trim()] = null;
             }
           });
         }
         return result;
       });
-      
+
       const imageSelector = 'img.im11_pic_main';
       const imageElement = await page.$(imageSelector);
       const image = imageElement ? await imageElement.evaluate(el => el.src) : 'none';
@@ -130,116 +130,132 @@ async function scrapeData(url,dep) {
 
       const descriptionSelector = 'div#txtAnnonceTrunc';
       const descriptionElement = await page.$(descriptionSelector);
-      const description = descriptionElement ? await descriptionElement.evaluate(el => el.textContent.replace(/[\n\t]/g, '').replace(/\s{2,}/g, ' '))  : 'none';
-      
+      const description = descriptionElement ? await descriptionElement.evaluate(el => el.textContent.replace(/[\n\t]/g, '').replace(/\s{2,}/g, ' ')) : 'none';
+
       const hasCuisine = description.includes('cuisine');
       const cuisine = hasCuisine ? true : false;
 
       const departement = dep;
 
-      const scrapedData = { title: pageTitle,url,ref,typeBien,ville,codePostale,departement, price, surface, pieces,cuisine, features, description, image };
+      const scrapedData = { title: pageTitle, url, ref, typeBien, ville, codePostale, departement, price, surface, pieces, cuisine, features, description, image };
       data.push(scrapedData);
       console.log(`[ANNONCE ${i} SCRAPPED]`);
-      i +=1;
+      i += 1;
 
     }
-  }catch (e) {
-    if (e instanceof puppeteer.errors.TimeoutError) {
+  } catch (e) {
+    if (e instanceof puppeteer.TimeoutError) {
       console.error('Timeout error:', e.message);
       await browser.close();
-      return [data,lastPage]; // error and not last page
-    }else {
+      return [data, lastPage]; // error and not last page
+    } else {
       console.error('Other error:', e.message);
     }
   }
 
 
   await browser.close();
-  return [data,lastPage];
+  return [data, lastPage];
 }
 
-async function run(url,dep) {
-  const [data,lastPage] = await scrapeData(url,dep);
-  return [data,lastPage];
+async function scrapeOneDepartment(department) {
+  let i = 1;
+  let end = true;
+
+  const allData = [];
+
+  while (true) {
+    const url = `https://www.paruvendu.fr/immobilier/annonceimmofo/liste/listeAnnonces?tt=1&tbApp=1&tbMai=1&at=1&pa=FR&lo=${department}&ddlFiltres=nofilter&p=${i}`;
+
+    try {
+      const [data, lastPage] = await scrapeOnePage(url, depNumber);
+      if (lastPage) {
+        console.log("[SCRAPING HAS FINISHED]");
+        allData.push(...data);
+        break;
+      }
+
+      if (data === 1) {
+        i++;
+        continue;
+      }
+
+      allData.push(...data);
+      console.log("[SCRAPING FINISHED FOR PAGE %d]", i);
+      i++;
+
+    } catch (error) {
+      i++;
+      console.error("An error occurred during scraping:", error);
+    }
+  }
+
+  return allData;
 }
 
 async function scrapeAllPages() {
   const allData = [];
-  
-  for (let j = 1; j <= 95; j++) {
-    const depNumber = j <= 9 ? "0" + j : j.toString();
-    let i = 1;
-    let end = true;
-    
-    while (end) {
-      const url = `https://www.paruvendu.fr/immobilier/annonceimmofo/liste/listeAnnonces?tt=1&tbApp=1&tbMai=1&at=1&pa=FR&lo=${depNumber}&ddlFiltres=nofilter&p=${i}`;
-      
-      try {
-        const [data,lastPage] = await run(url, depNumber);
-        if (lastPage) {
-          console.log("[SCRAPING HAS FINISHED]");
-          allData.push(...data);
-          end = false;
-        } else if (data === 1) {
-          i++;
-          continue;
-        } else {
-          allData.push(...data);
-          console.log("[SCRAPING FINISH FOR PAGE]", i);
-          i++;
-        }
-      } catch (error) {
-        console.error("An error occurred during scraping:", error);
-      }
-    }
-  }
-  
+
   return allData;
 }
 
-
-
 const parseArgs = () => {
   const optionDefitions = [
-      {
-          // Required
-          name: "output",
-          alias: "o",
-          type: String 
-      }
+    {
+      // Required
+      name: "output",
+      alias: "o",
+      type: String,
+      description: "The path of the folder where to store data"
+    }
   ];
   const options = commandLineArgs(optionDefitions);
 
   // Check if valid
   if (!options.output) {
-      throw new Error('"--output" argument required');
+    throw new Error('"--output" argument required');
   }
   if (!fs.existsSync(options.output)) {
-      throw new Error(`Output directory does not exist : ${options.output}`);
+    throw new Error(`Output directory does not exist : ${options.output}`);
   }
-  
+
   return options;
 };
 
 
 const main = async () => {
-  
+
   const startTime = Date.now();
 
   const args = parseArgs();
   const outputPath = args.output;
   console.log("[SCRAPPING INITIATED...]")
 
-  //TODO, call the specific method(s) for fetching data (iterable, array of jsons, whatever)
-  scrapeAllPages()
-      .then(data => {
-          fs.writeFileSync(outputPath,
-          // TODO, use outputPath to save to specific path
-          JSON.stringify(data)
-          )});
+  const allData = [];
+
+  for (let depNumber = 1; depNumber <= 95; depNumber++) {
+    const startDepTime = Date.now();
+    console.log("Scrape for department", depNumber);
+
+    const depNumberString = depNumber <= 9 ? "0" + depNumber : depNumber.toString();
+    data = await scrapeOneDepartment(depNumberString);
+    allData.push(...data);
+
+    const endDepTime = Date.now();
+    console.log(`[DEPT EXECUTION TIME : ${endDepTime - startDepTime}ms]`);
+
+    // Save this to one file
+    const outputFilePath = path.resolve(outputPath, `dept_${depNumberString}.json`);
+    console.log("Save to path", outputFilePath);
+    fs.writeFileSync(outputFilePath, JSON.stringify(data));
+  }
 
   const endTime = Date.now();
   console.log(`[TOTAL EXECUTION TIME : ${endTime - startTime}ms]`);
+
+  const allDataOutputPath = path.resolve(outputPath, `allData.json`);
+  console.log("Save final file to", allDataOutputPath);
+  fs.writeFileSync(outputFilePath, JSON.stringify(allData));
 };
 
 
