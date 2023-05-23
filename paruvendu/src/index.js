@@ -1,9 +1,16 @@
-const puppeteer = require('puppeteer');
+// puppeteer-extra is a drop-in replacement for puppeteer,
+// it augments the installed puppeteer with plugin functionality
+const puppeteer = require('puppeteer-extra');
 const fs = require('fs');
 const path = require('path');
 const commandLineArgs = require('command-line-args');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 
 const DELAY_AFTER_LOAD_MS = 500;
+
+// Init the plugin before anything else
+// By default, all evasion techniques are set
+puppeteer.use(StealthPlugin())
 
 function delay(ms) {
   return new Promise((resolve) => {
@@ -16,7 +23,7 @@ async function scrapeOnePage(url, dep) {
   let lastPage = false;
   const browser = await puppeteer.launch({
     args: ['--no-sandbox'], // useful when using docker (allow using app as admin)
-    headless: true,
+    headless: "new",
     ignoreHTTPSErrors: true,
   });
   const page = await browser.newPage();
@@ -158,24 +165,23 @@ async function scrapeOnePage(url, dep) {
   return [data, lastPage];
 }
 
-async function scrapeOneDepartment(department) {
+async function scrapeOneDepartment(depNumber) {
   let i = 1;
-  let end = true;
-
   const allData = [];
 
   while (true) {
-    const url = `https://www.paruvendu.fr/immobilier/annonceimmofo/liste/listeAnnonces?tt=1&tbApp=1&tbMai=1&at=1&pa=FR&lo=${department}&ddlFiltres=nofilter&p=${i}`;
+    const url = `https://www.paruvendu.fr/immobilier/annonceimmofo/liste/listeAnnonces?tt=1&tbApp=1&tbMai=1&at=1&pa=FR&lo=${depNumber}&ddlFiltres=nofilter&p=${i}`;
 
     try {
       const [data, lastPage] = await scrapeOnePage(url, depNumber);
       if (lastPage) {
         console.log("[SCRAPING HAS FINISHED]");
         allData.push(...data);
-        break;
+        return allData;
       }
 
       if (data === 1) {
+        console.warn("Data is '1', what ?");
         i++;
         continue;
       }
@@ -189,14 +195,6 @@ async function scrapeOneDepartment(department) {
       console.error("An error occurred during scraping:", error);
     }
   }
-
-  return allData;
-}
-
-async function scrapeAllPages() {
-  const allData = [];
-
-  return allData;
 }
 
 const parseArgs = () => {
