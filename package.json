@@ -11,6 +11,8 @@
   "license": "ISC",
   "dependencies": {
     "command-line-args": "^5.2.1",
-    "puppeteer": "^19.7.4"
+    "puppeteer": "^20.3.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   }
 }
