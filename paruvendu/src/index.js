@@ -18,7 +18,7 @@ function delay(ms) {
   });
 }
 
-async function scrapeOnePage(url, dep) {
+async function scrapeOnePage(url, dep, pageIndex) {
   const data = [];
   let lastPage = false;
   const browser = await puppeteer.launch({
@@ -45,6 +45,15 @@ async function scrapeOnePage(url, dep) {
       console.log("[LAST PAGE TO SCRAP IN THIS SECTION]");
     }
 
+    // Check n° 2, are we really on the wanted page
+    const currentPageNumber = await page.$eval('nav > span.border-red', span => parseInt(span.textContent));
+    if (currentPageNumber != pageIndex) {
+        lastPage = true;
+        console.log("[LAST PAGE ATTAINED ! RETURNED TO FIRST PAGE]");
+        // Return directly with no data
+        return [data, lastPage];
+    }
+    
     //Scrape the data and push it into the `data` array
     const hrefs = await page.$$eval('.flex.sm\\:block.gap-4 a', links => links.map(link => link.href));
 
@@ -173,7 +182,7 @@ async function scrapeOneDepartment(depNumber) {
     const url = `https://www.paruvendu.fr/immobilier/annonceimmofo/liste/listeAnnonces?tt=1&tbApp=1&tbMai=1&at=1&pa=FR&lo=${depNumber}&ddlFiltres=nofilter&p=${i}`;
 
     try {
-      const [data, lastPage] = await scrapeOnePage(url, depNumber);
+      const [data, lastPage] = await scrapeOnePage(url, depNumber, i);
       if (lastPage) {
         console.log("[SCRAPING HAS FINISHED]");
         allData.push(...data);
