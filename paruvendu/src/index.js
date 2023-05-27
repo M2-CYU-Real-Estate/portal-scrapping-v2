@@ -51,6 +51,7 @@ async function scrapeOnePage(url, dep, pageIndex) {
         lastPage = true;
         console.log("[LAST PAGE ATTAINED ! RETURNED TO FIRST PAGE]");
         // Return directly with no data
+        await browser.close();
         return [data, lastPage];
     }
     
